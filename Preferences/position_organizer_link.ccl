@@ -1,0 +1,20 @@
+select    position=cv.display ;; I could have used uar_get_code_display(tref.position_cd) here instead, but less portable
+        , a.description
+		, nvp.pvc_value
+
+from name_value_prefs nvp
+  , (inner join view_prefs
+                tref
+              on tref.view_prefs_id = nvp.parent_entity_id)
+  , (inner join application
+                a
+             on a.application_number = tref.application_number)
+  , (inner join code_value
+                cv
+             on cv.code_value = tref.position_cd
+            and cv.code_set = 88
+            and cv.active_ind = 1)
+where nvp.pvc_name in ("VIEW_CAPTION")
+  and nvp.pvc_value in ("Quality & Charge Capture") ;; Put the string of the tab label
+order by a.application_number, position,a.description ;,position
+with maxtime=300
