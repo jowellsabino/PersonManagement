@@ -1,7 +1,7 @@
-select    position=cv.display ;; I could have used uar_get_code_display(tref.position_cd) here instead, but less portable
-        , a.description
-		, nvp.pvc_value
-
+;; get all position with an Organizer link of a specified label
+select	position=cv.display ;; I could have used uar_get_code_display(tref.position_cd) here instead, but less portable
+      , a.description
+      , nvp.pvc_value
 from name_value_prefs nvp
   , (inner join view_prefs
                 tref
@@ -16,5 +16,5 @@ from name_value_prefs nvp
             and cv.active_ind = 1)
 where nvp.pvc_name in ("VIEW_CAPTION")
   and nvp.pvc_value in ("Quality & Charge Capture") ;; Put the string of the tab label
-order by a.application_number, position,a.description ;,position
+order by a.application_number, position,a.description
 with maxtime=300
