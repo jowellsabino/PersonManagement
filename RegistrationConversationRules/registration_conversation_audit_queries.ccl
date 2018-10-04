@@ -1,0 +1,62 @@
+/* Audit query to look for most used regustrtation conversations
+;; Note limitation of this query:  since it references pm_transaction,
+;; the query will only go so far as the row in pm_transaction is overwritten.
+;; Use query on code value extension to verify how many rows are allowed
+;; in pm_transaction before rows are overwritten
+*/
+select pt.task_number 
+     , a.description 
+     , USED_NUM=count(*) 
+     , EARLIEST_USE=format(min(pt.activity_dt_tm), "MM/DD/YYYY HH:MM;;d") 
+from pm_transaction pt 
+, (left join application_task a 
+           on a.task_number = pt.task_number 
+          and a.description = '*Person Mgmt*') 
+
+where pt.task_number != 0 
+  and pt.updt_task = 100000 
+group by pt.task_number, a.description 
+with format(date,";;") 
+go
+
+/* Detailed query version of above
+;; Show actual users
+*/
+select pt.task_number
+     , a.description
+     , pt.current_user
+     , pr.name_full_formatted
+     , pt.activity_dt_tm
+     , pt.transaction
+from pm_transaction pt
+, (left join application_task a
+           on a.task_number = pt.task_number
+          and a.description = '*Person Mgmt*')
+, (inner join prsnl pr
+           on pr.username = trim(pt.current_user)
+          and pr.active_ind = 1
+          and pr.end_effective_dt_tm > sysdate)
+where pt.task_number != 0
+  and pt.updt_task = 100000
+  and pt.task_number = 117010
+order by pt.activity_dt_tm desc
+with format(date,";;")
+go
+
+/* This queries code value extension for the maximum number of rows in pm_transaction 
+;; before rows are overwritten
+*/ 
+Select cve.field_value 
+from 
+code_value cv, 
+code_value_extension cve 
+where cv.code_set = 20790 
+and cv.cdf_meaning = "TRANSACTIONS" 
+and cv.active_ind = 1 
+and cve.code_value = cv.code_value 
+and cve.field_name = 'OPTION' 
+go 
+
+/* As of 10.03/18, value of query is 100,000.  This correlates with limited results of previous
+;; query that shows usage only over the past 2 days 
+*/
