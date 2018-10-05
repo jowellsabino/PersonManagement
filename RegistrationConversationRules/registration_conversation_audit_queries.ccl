@@ -38,7 +38,7 @@ from pm_transaction pt
           and pr.end_effective_dt_tm > sysdate)
 where pt.task_number != 0
   and pt.updt_task = 100000
-  and pt.task_number = 117010
+  and pt.task_number in (117010, 117024) ;; 117024 is Pathnet launched from DOE
 order by pt.activity_dt_tm desc
 with format(date,";;")
 go
