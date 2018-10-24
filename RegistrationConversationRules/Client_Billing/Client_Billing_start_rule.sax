@@ -1,0 +1,183 @@
+'*Warns user if patient selected has a deceased date/time. 
+
+dim death as string 
+death = getvalue("person.deceased_dt_tm") 
+
+if death <> "0000000000000000" then 
+  call message("This person is already deceased.") 
+  call exitconversation 
+  exit sub 
+end if 
+
+'*Prevents user from inadvertantly selecting an already discharged encntr when trying to add a new one 
+' and simply making updates to the discharged encntr 
+
+if getvalue("person.encounter.disch.dt.tm") > "0000000000000000" then 
+   call message("You cannot register a patient with an encounter that has already been discharged") 
+   call exitconversation 
+end if 
+
+'*Does not allow a new encntr to be added if there is already an active EMERGENCY, INPATIENT, OBSERVATION, OUTPATIENT or 
+'* DAYSURGERY Encounter 
+
+dim person_id as double 
+dim encntr_id as double 
+dim eclass_cd as double 
+dim etype_cd as double 
+dim class_cd as double 
+dim eid as double 
+dim str as string 
+dim msg as string 
+dim edclass_cd as double 
+dim iclass_cd as double 
+dim oclass_cd as double 
+dim hclass_cd as double 
+dim dsclass_cd as double 
+
+'Gets person id and encntr_id 
+person_id = getvalue("person.person_id") 
+encntr_id = getvalue("person.encounter.encntr_id") 
+
+'Verifies if person exists and user is adding a new encounter 
+if person_id > 0 and encntr_id <= 0 then 
+     eid = 0 
+     edclass_cd = displaykeycode("EMERGENCY", 71) 
+     iclass_cd = displaykeycode("INPATIENT", 71) 
+     oclass_cd = displaykeycode("OBSERVATION", 71) 
+     hclass_cd = displaykeycode("OUTPATIENT", 71) 
+     dsclass_cd = displaykeycode("DAYSURGERY", 71) 
+       str = "select e.encntr_id from encounter e where e.person_id = " 
+       str = str & Chr(13) & Chr(10) & cstr(person_id) & " and (e.encntr_type_cd = " 
+       str = str & Chr(13) & Chr(10) & cstr(edclass_cd) & " 
+       str = str & Chr(13) & Chr(10) & " or e.encntr_type_cd = " & cstr(iclass_cd) 
+       str = str & Chr(13) & Chr(10) & " or e.encntr_type_cd = " & cstr(oclass_cd) 
+       str = str & Chr(13) & Chr(10) & " or e.encntr_type_cd = " & cstr(hclass_cd) 
+       str = str & Chr(13) & Chr(10) & " or e.encntr_type_cd = " & cstr(dsclass_cd) & ")" 
+       str = str & Chr(13) & Chr(10) & " and e.active_ind = 1" 
+       str = str & Chr(13) & Chr(10) & " and e.encntr_status_cd = 854" 
+       str = str & Chr(13) & Chr(10) & " and e.beg_effective_dt_tm <= cnvtdatetime(curdate,curtime3)" 
+       str = str & Chr(13) & Chr(10) & " and e.end_effective_dt_tm >= cnvtdatetime(curdate,curtime3)" 
+       eid = cdbl(ccl(str, TRUE)) 
+       if eid > 0 then 
+     call message("Patient selected has an active Inpatient, Emergency, Observation, Day Surgery, or Hospice encounter. Please discharge those encounters before proceeding.") 
+     call exitconversation 
+    exit sub 
+  end if 
+end if 
+
+Old FINISH Rule: 
+----------------------- 
+
+'*clears out the new person comments from the new comment field and adds them to the old person comment field 
+
+dim add_field as string 
+dim old_field as string 
+dim user as string 
+dim user_name as string 
+dim add_comment as string 
+dim new_comment as string 
+dim old_comment as string 
+
+add_field = "PERSON.USER_DEFINED.NEWPERSONCOM" 
+old_field = "PERSON.COMMENT_01.LONG_TEXT" 
+
+user = getvalue ("TRANSACTION_INFO.PRSNL_ID") 
+
+user_name = ccl("select p.name_full_formatted from prsnl p where p.person_id = " & user, TRUE) 
+
+add_comment = getvalue(add_field) 
+old_comment = getvalue(old_field) 
+
+if len(add_comment) > 0 then 
+
+new_comment = date & " " & time & " " & "Comment by: " & user_name & " " 
+new_comment = new_comment & chr(13) & chr(10) 
+new_comment = new_comment & add_comment 
+new_comment = new_comment & chr(13) & chr(10) 
+new_comment = new_comment & "--------------------------------------" 
+new_comment = new_comment & chr(13) & chr(10) 
+new_comment = new_comment & chr(13) & chr(10) 
+new_comment = new_comment & old_comment 
+call setvalue (old_field, new_comment) 
+call setvalue (add_field, "") 
+ call setvalue(add_comment, "") 
+ call setvalue(old_comment, "") 
+ call setvalue(new_comment, "") 
+end if 
+
+'*clears out the new encounter comments from the new encunter comment field and adds them to the old encounter comment field 
+
+DIM ADD_FIELD3 AS STRING 
+DIM OLD_FIELD3 AS STRING 
+DIM ADD_COMMENT3 AS STRING 
+DIM NEW_COMMENT3 AS STRING 
+DIM OLD_COMMENT3 AS STRING 
+
+add_field3 = "PERSON.ENCOUNTER.USER_DEFINED.NEWENCNTRCOMM" 
+old_field3 = "PERSON.ENCOUNTER.COMMENT_01.LONG_TEXT" 
+add_comment3 = getvalue(add_field3) 
+old_comment3 = getvalue(old_field3) 
+
+if len(add_comment3) > 0 then 
+
+new_comment3 = date & " " & time & " " & "Comment by: " & user_name & " " 
+new_comment3 = new_comment3 & chr(13) & chr(10) 
+new_comment3 = new_comment3 & add_comment3 
+new_comment3 = new_comment3 & chr(13) & chr(10) 
+new_comment3 = new_comment3 & "--------------------------------------" 
+new_comment3 = new_comment3 & chr(13) & chr(10) 
+new_comment3 = new_comment3 & chr(13) & chr(10) 
+new_comment3 = new_comment3 & old_comment3 
+call setvalue (old_field3, new_comment3) 
+call setvalue (add_field3, "") 
+call setvalue(add_comment3, "") 
+call setvalue(old_comment3, "") 
+call setvalue(new_comment3, "") 
+end if 
+
+
+'*Phone # must be 10 digits for Patient if USA is the phone format 
+
+dim usa_cd as double 
+dim tmpphn as string 
+usa = meaningcode(281,"US") 
+
+'Patient's Home Phone 
+tmpphn = getvalue("person.home_phone.phone_num") 
+if getvalue("person.home_phone.phone_format_cd") = usa then 
+   if len(tmpphn) > 0 and len(tmpphn) <> 10 then 
+      call message("Reverify Patient's Phone Number.") 
+      call changefocus("person.home_phone.phone_num") 
+   end if 
+end if 
+
+
+'*Checks that the Patient has a valid SSN # 
+
+dim tmplen as integer 
+
+tmplen = 0 
+
+'Patient's SSN 
+tmplen = len(getvalue("person.ssn.alias")) 
+if tmplen > 0 and tmplen < 7 then 
+   call message("Reverify Patient's SSN.") 
+   call changefocus("person.ssn.alias") 
+end if 
+
+'*Checks that the Patient has a valid zipcode if USA is the country 
+
+
+dim tmpzip as string 
+dim tmpfld as string 
+
+'Patient's Home Address 
+tmpfld = "PERSON.HOME_ADDRESS.ZIPCODE" 
+tmpzip = getvalue(tmpfld) 
+tmplen = len(tmpzip) 
+if codedisplaykey(getvalue(parentfieldname(tmpfld) & ".country_cd")) = "USA" then 
+  if tmplen > 0 and tmplen <> 5 and tmplen <> 9 then 
+     call message("Zipcode must be 5 or 9 digits.") 
+     call changefocus(tmpfld) 
+  end if 
+end if 
