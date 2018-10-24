@@ -25,8 +25,7 @@ if reltn_cd > 0 then
       CALL SETVALUE(PARENT & ".PERSON.HOME_PHONE.PHONE_NUM", "")
       CALL SETVALUE(PARENT & ".PERSON.ALT_PHONE.PHONE_NUM", "")
       CALL SETVALUE(PARENT & ".PERSON.ALT_PHONE.EXTENSION", "")
-     ' JS: this procedure exitsub is not defined anywhere, will comment out for now. 
-     'call exitsub
+      exit sub
 'elseif ucase$(trim$(codedisplaykey(reltn_cd)))<> "SELF" then
 
 'Call InvokeSearch("person.emc.person.person_id")
