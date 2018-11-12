@@ -6,28 +6,20 @@ SELECT pr.person_id
      , eau.directory_ind AS LDAP
      , pr.active_ind
      , pr.end_effective_dt_tm
-     , cvcontr.display AS Contributor_System
      , prup.name_full_formatted AS Updated_By
      , pr.updt_dt_tm
      , prcr.name_full_formatted AS Created_By
-     , pr.create_dt_tm
-     , eau.password_hash
-     , eau.password_change_dt_tm
-     , eau.password_lifetime
+     , pr.create_dt_tm 
+     , pr.updt_task 
 FROM v500.prsnl pr
 LEFT   
 JOIN code_value cvpos
   ON cvpos.code_value = pr.position_cd  
- AND cvpos.code_set = 88  
-LEFT   
-JOIN code_value cvcontr
-  ON cvcontr.code_value = pr.contributor_system_cd 
- AND cvcontr.code_set = 89  
-LEFT   
+ AND cvpos.code_set = 88   
+  
 JOIN prsnl prup
   ON prup.person_id = pr.updt_id
  
-LEFT  
 JOIN prsnl prcr
   ON prcr.person_id = pr.create_prsnl_id
  
@@ -35,10 +27,10 @@ JOIN ea_user eau
   ON eau.username = pr.username
  /* and eau.directory_ind != -1) ;; since authview default is direcoty = Y, directory_ind = 0 is also LDAP */
  
-WHERE (pr.name_last_key like 'CHB%' 
-       OR  
-       pr.name_last_key like  'BCH%')
-  and pr.name_first_key is not null
-  and pr.person_id > 0 
- 
+WHERE pr.position_cd > 0
+  AND pr.contributor_system_cd = 0
+  AND pr.active_ind = 1
+  /* AND pr.end_effective_dt_tm > sysdate */
+  AND pr.updt_id > 0
+  AND pr.create_prsnl_id > 0 
 ORDER BY pr.contributor_system_cd,eau.directory_ind desc, pr.name_last_key, pr.name_first_key
