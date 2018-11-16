@@ -1,0 +1,210 @@
+;; Search the PVC that is a DETAIL pref.
+select position=cv.display
+;;     , a.application_number
+     , APPLICATION=a.description
+     , LEVEL=vpref.frame_type
+     , TAB_NAME=dpref.view_name
+     , TAB_DISPLAY_SEQ=nvpq.pvc_value
+     , COMPONENT_CAPTION_NAME=nvpr.pvc_value
+;;     , dpref.view_seq
+     , REPORT_NAME=nvpc.pvc_value
+     , REPORT_PARAM=nvp.pvc_value
+;;     , nvp.*
+from name_value_prefs nvp
+  ;; Link to the same level PVC, but we want the REPORT_NAME
+  , (inner join  name_value_prefs nvpc
+             on nvpc.parent_entity_id = nvp.parent_entity_id
+            and nvpc.parent_entity_name = nvp.parent_entity_name
+            and nvpc.active_ind = 1
+            and nvpc.pvc_name = 'REPORT_NAME' )
+  ;; link to detail_prefs as an intermediary step to get to PVC's of parents
+  ;; depends on what is used n nvp.parent_entity_name below 
+  , (inner join detail_prefs dpref
+             on dpref.detail_prefs_id = nvp.parent_entity_id)
+  ;; link to application table to get human-readable application name
+  , (inner join application a
+             on  a.application_number = dpref.application_number)
+  ;; link to codeset to get human-readable position description
+  ;; THIS WILL NOT CAPTURE application-level defaults, if they exist
+  ;; See separate query
+  ;; (which is overridden anyways by position-level defaults )
+  , (inner join code_value cv
+             on cv.code_value = dpref.position_cd
+            and cv.code_set = 88
+            and cv.active_ind = 1)
+  ;; Detail_pref is part of a view, so let us get the view_pref row
+  ;; The view_pref shares the same attributes below as the linked detail_pref row
+  , (inner join view_prefs vpref
+            on vpref.view_name = dpref.view_name
+           and vpref.view_seq = dpref.view_seq
+           and vpref.application_number = dpref.application_number
+           and vpref.position_cd = dpref.position_cd
+           and vpref.prsnl_id = dpref.prsnl_id
+           and vpref.active_ind = 1 )
+  ;; Link to PVC of parent to get caption name
+  , (inner join name_value_prefs nvpr
+             on nvpr.parent_entity_name = 'VIEW_PREFS'
+            and nvpr.parent_entity_id = vpref.view_prefs_id
+            and nvpr.pvc_name = 'VIEW_CAPTION')
+  ;; link to PVC of parent to get display sequence
+  , (inner join name_value_prefs nvpq
+             on nvpq.parent_entity_name = 'VIEW_PREFS'
+            and nvpq.parent_entity_id = vpref.view_prefs_id
+            and nvpq.pvc_name = 'DISPLAY_SEQ')            
+;; Define the search criteria here.
+where nvp.pvc_name = "REPORT_PARAM"
+   and nvp.pvc_value = "*I:*"
+   and nvp.parent_entity_name = 'DETAIL_PREFS' ;; Just to document what table we link above.
+order by position,a.description,a.application_number
+with maxtime=300 ;; always good to have a query circuit-breaker
+go
+
+;; Search the PVC that is a DETAIL pref.
+;; APPLICATION-LEVEL prefs only
+select ;;position=cv.display
+;;     , a.application_number
+       APPLICATION=a.description
+     , LEVEL=vpref.frame_type
+     , TAB_NAME=dpref.view_name
+     , TAB_DISPLAY_SEQ=nvpq.pvc_value
+     , COMPONENT_CAPTION_NAME=nvpr.pvc_value
+;;     , dpref.view_seq
+     , REPORT_NAME=nvpc.pvc_value
+     , REPORT_PARAM=nvp.pvc_value
+;;     , nvp.*
+from name_value_prefs nvp
+  ;; Link to the same level PVC, but we want the REPORT_NAME
+  , (inner join  name_value_prefs nvpc
+             on nvpc.parent_entity_id = nvp.parent_entity_id
+            and nvpc.parent_entity_name = nvp.parent_entity_name
+            and nvpc.active_ind = 1
+            and nvpc.pvc_name = 'REPORT_NAME' )
+  ;; link to detail_prefs as an intermediary step to get to PVC's of parents
+  ;; depends on what is used n nvp.parent_entity_name below 
+  , (inner join detail_prefs dpref
+             on dpref.detail_prefs_id = nvp.parent_entity_id
+            and dpref.position_cd = 0.0)
+            and dpref.prsnl_id = 0.0) ;; application-level prefs only
+  ;; link to application table to get human-readable application name
+  , (inner join application a
+             on  a.application_number = dpref.application_number)
+  ;; link to codeset to get human-readable position description
+  ;; Detail_pref is part of a view, so let us get the view_pref row
+  ;; The view_pref shares the same attributes below as the linked detail_pref row
+  , (inner join view_prefs vpref
+            on vpref.view_name = dpref.view_name
+           and vpref.view_seq = dpref.view_seq
+           and vpref.application_number = dpref.application_number
+           and vpref.position_cd = dpref.position_cd
+           and vpref.prsnl_id = dpref.prsnl_id
+           and vpref.active_ind = 1 )
+  ;; Link to PVC of parent to get caption name
+  , (inner join name_value_prefs nvpr
+             on nvpr.parent_entity_name = 'VIEW_PREFS'
+            and nvpr.parent_entity_id = vpref.view_prefs_id
+            and nvpr.pvc_name = 'VIEW_CAPTION')
+  ;; link to PVC of parent to get display sequence
+  , (inner join name_value_prefs nvpq
+             on nvpq.parent_entity_name = 'VIEW_PREFS'
+            and nvpq.parent_entity_id = vpref.view_prefs_id
+            and nvpq.pvc_name = 'DISPLAY_SEQ')            
+;; Define the search criteria here.
+where nvp.pvc_name = "REPORT_PARAM"
+   and nvp.pvc_value = "*I:*"
+   and nvp.parent_entity_name = 'DETAIL_PREFS' ;; Just to document what table we link above.
+order by a.description,a.application_number
+with maxtime=300 ;; always good to have a query circuit-breaker
+go
+
+;;;;;; This is the version if we are searching via view_comp_prefs
+;;;;;; Search the PVC that is a VIEW COMPONENT PREF
+;;;;select distinct position=cv.display,
+;;;;          ;;a.application_number,
+;;;;          APPLICATION=a.description,
+;;;;          TAB_NAME=vcpref.view_name,
+;;;;          TAB_DISPLAY_SEQ=nvpq.pvc_value,
+;;;;          COMPONENT_CAPTION_NAME=nvpr.pvc_value,
+;;;;          ;;dpref.view_seq,
+;;;;          REPORT_NAME=nvpc.pvc_value,
+;;;;          REPORT_PARAM=nvp.pvc_value
+;;;;          ;; nvp.*
+;;;;from name_value_prefs nvp
+;;;;  ;; Link to the same level PVC, but we want the REPORT_NAME
+;;;;  , (inner join  name_value_prefs nvpc
+;;;;             on nvpc.parent_entity_id = nvp.parent_entity_id
+;;;;            and nvpc.parent_entity_name = nvp.parent_entity_name
+;;;;            and nvpc.active_ind = 1
+;;;;            and nvpc.pvc_name = 'REPORT_NAME' )
+;;;;  ;; link to detail_prefs as an intermediary step to get to PVC's of parents
+;;;;  ;; depends on what is used n nvp.parent_entity_name below 
+;;;;  , (inner join view_comp_prefs vcpref
+;;;;             on vcpref.view_comp_prefs_id = nvp.parent_entity_id)
+;;;;  ;; link to application table to get human-readable application name
+;;;;  , (inner join application a
+;;;;             on  a.application_number = vcpref.application_number)
+;;;;  ;; link to codeset to get human-readable position description
+;;;;  , (inner join code_value cv
+;;;;             on cv.code_value = vcpref.position_cd
+;;;;            and cv.code_set = 88
+;;;;            and cv.active_ind = 1)
+;;;;  ;; Detail_pref is part of a view, so let us get the view_pref row
+;;;;  ;; The view_pref shares the same attributes below as the linked detail_pref row
+;;;;  , (inner join view_prefs vpref
+;;;;            on vpref.view_name = vcpref.view_name
+;;;;           and vpref.view_seq = vcpref.view_seq
+;;;;           and vpref.application_number = vcpref.application_number
+;;;;           and vpref.position_cd = vcpref.position_cd
+;;;;           and vpref.prsnl_id = vcpref.prsnl_id
+;;;;           and vpref.active_ind = 1 )
+;;;;  ;; Link to PVC of parent to get caption name
+;;;;  , (inner join name_value_prefs nvpr
+;;;;             on nvpr.parent_entity_name = 'VIEW_PREFS'
+;;;;            and nvpr.parent_entity_id = vpref.view_prefs_id
+;;;;            and nvpr.pvc_name = 'VIEW_CAPTION')
+;;;;  ;; link tiPVC of parent to get display sequence
+;;;;  , (inner join name_value_prefs nvpq
+;;;;             on nvpq.parent_entity_name = 'VIEW_PREFS'
+;;;;            and nvpq.parent_entity_id = vpref.view_prefs_id
+;;;;            and nvpq.pvc_name = 'DISPLAY_SEQ')            
+;;;;;; Define the search criteria here.
+;;;;where nvp.pvc_name = "REPORT_PARAM"
+;;;;   and nvp.pvc_value = "*I:*"
+;;;;   and nvp.parent_entity_name = 'VIEW_COMP_PREFS' ;; Just to document what table we link above.
+;;;;order by position,a.description,a.application_number
+;;;;with maxtime=300 ;; always good to have a query circuit-breaker
+;;;;go
+
+select *
+from name_value_prefs nvp
+where nvp.name_value_prefs_id in (586115631,252583895)
+go
+
+
+;;NAME_VALUE_PREFS_ID	PARENT_ENTITY_NAME	PARENT_ENTITY_ID	PVC_NAME	PVC_VALUE	ACTIVE_IND
+;;       252583895.00	DETAIL_PREFS	    252583892.00	REPORT_PARAM	"MINE", $USR_PersonId$, $USR_PositionCd$, "$APP_AppName$", "I:\\\\WININTEL\\static_content\\Care Compass","cc_organizer.html", "cer_install:"	         1
+;;       586115631.00	DETAIL_PREFS	    586115617.00	REPORT_PARAM	"mine", 0.00, 0.00, $USR_PersonID$, "I:\\\\WININTEL\\static_content\\rcm_assignment_worklist", "rcm_assignment_list.html", "powerchart.exe", "cer_install:"	         1
+
+
+
+select *
+from detail_prefs
+where detail_prefs_id in (586115617.00,252583892.00)
+go
+
+;;DETAIL_PREFS_ID	APPLICATION_NUMBER	POSITION_CD	PRSNL_ID	PERSON_ID	VIEW_NAME	VIEW_SEQ	COMP_NAME	COMP_SEQ
+;;   252583892.00	            600005	        441.00	          0.00	          0.00	DISCERNRPT	        105	DISCERNRPT	          1
+;;   586115617.00	            600005	        441.00	          0.00	          0.00	DISCERNRPT	        118	DISCERNRPT	          1
+
+
+select *
+from view_prefs
+where application_number = 600005
+  and position_cd = 441.00
+  and prsnl_id = 0.0
+  and view_name = 'DISCERNRPT'
+  and view_seq in (105,118)
+go
+
+;;VIEW_PREFS_ID		APPLICATION_NUMBER	POSITION_CD		   PRSNL_ID	FRAME_TYPE	VIEW_NAME	VIEW_SEQ	ACTIVE_IND
+;;  252583881.00	      600005	        441.00	          0.00		ORG		DISCERNRPT	   105	         1
+;;  586115491.00	      600005	        441.00	          0.00		ORG		DISCERNRPT	   118	         1
