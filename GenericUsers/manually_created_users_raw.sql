@@ -35,8 +35,12 @@ JOIN ads_v500_stage.admin.prsnl prcr
 --  ON eau.username = pr.username
  /* and eau.directory_ind != -1) ;; since authview default is direcoty = Y, directory_ind = 0 is also LDAP */
  
-WHERE (pr.name_last_key like 'CHB%' 
-       OR  
-       pr.name_last_key like  'BCH%')
-  and pr.name_first_key is not null
-  and pr.person_id > 0
+WHERE pr.position_cd > 0
+  AND pr.contributor_system_cd = 0 /* Will exclude CERNER LDAP, contributor_system_cd = 3805574.00 */
+  AND pr.active_ind = 1
+  AND not sql_function..regexp_like(pr.username,'^CH[0-9]+')  
+  AND pr.username != ''    
+  AND pr.name_last_key not like 'CHB%'   
+  AND pr.name_last_key not like 'BCH%' 
+ 
+ORDER BY pr.contributor_system_cd, pr.name_last_key, pr.name_first_key
