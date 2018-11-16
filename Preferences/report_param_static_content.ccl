@@ -1,3 +1,17 @@
+; Same "parent" attributes of View, even if the view_prefs_is are different.
+ 
+ 
+;;  So, hierarchy is (add application_number, posisiton_cd and prsnl_id to indicate level of pref )
+;;
+;;    View_prefs <-- Name_Value_Prefs (VIEW_NAME, VIEW_SEQ)
+;;       View_Comp_Prefs <-- Name_Value_Prefs (VIEW_NAME, VIEW_SEQ, COMP_NAME, COMP_SEQ)
+;;       Detail_Prefs <-- Name_Value_Prefs (VIEW_NAME, VIEW_SEQ, COMP_NAME, COMP_SEQ)
+ 
+;;
+;; It looks like the case that if a pref is added in a position/user level, any components/details added
+;; later will also be at the position/user level
+;; so we can use the posisiton_cd and prsnl_id as additional qualifiers to get to the "true" parent
+ 
 ;; Search the PVC that is a DETAIL pref.
 select position=cv.display
 ;;     , a.application_number
